@@ -42,9 +42,13 @@
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 const categories = [
   { name: "Neu/Import", subs: [] },
-  { name: "Blowjob", subs: ["Blasen", "Deepthroat"] },
-  { name: "Abspritzen", subs: ["Ins Maul spritzen"] },
-  { name: "Sperma-Spiele", subs: ["Sperma schlucken"] }
+  { name: "Vorspiel", subs: ["Küssen", "Ausziehen", "Streicheln"] },
+  { name: "Blowjob", subs: ["Blasen", "Deepthroat", "Maulfick"] },
+  { name: "Ficken", subs: ["Missionar", "Doggy", "Reiterin"] },
+  { name: "Anal", subs: ["Arsch lecken", "Anal"] },
+  { name: "Abspritzen", subs: ["Ins Maul spritzen", "Ins Gesicht spritzen"] },
+  { name: "Sperma-Spiele", subs: ["Sperma schlucken", "Sperma gurgeln"] },
+  { name: "Fesseln & Spiele", subs: ["Fesseln", "Spanking"] }
 ];
 let videos = [], selected = new Set(), currentFolder = null;
 function renderFolders() {
@@ -56,41 +60,60 @@ function renderFolders() {
     d.textContent = cat.name;
     d.onclick = () => { currentFolder = cat.name; renderFolders(); renderVideos(); };
     el.appendChild(d);
+    cat.subs.forEach(sub => {
+      const s = document.createElement("div");
+      s.className = "folder";
+      s.style.marginLeft = "16px";
+      s.style.fontSize = "13px";
+      s.textContent = "› " + sub;
+      s.onclick = () => { currentFolder = cat.name + "/" + sub; renderFolders(); renderVideos(); };
+      el.appendChild(s);
+    });
   });
 }
 function renderVideos() {
   const el = document.getElementById("videos");
   el.innerHTML = "";
-  videos.forEach(v => {
+  const list = currentFolder ? videos.filter(v => v.folder === currentFolder || !v.folder) : videos;
+  list.forEach(v => {
     const card = document.createElement("div");
     card.className = "video-card" + (selected.has(v.id) ? " selected" : "");
     const vid = document.createElement("video");
-    vid.src = v.url; vid.muted = true;
+    vid.src = v.url; vid.muted = true; vid.preload = "metadata";
     card.appendChild(vid);
-    const n = document.createElement("div"); n.textContent = v.name; card.appendChild(n);
-    card.onclick = () => { selected.has(v.id) ? selected.delete(v.id) : selected.add(v.id); renderVideos(); };
+    const n = document.createElement("div"); n.textContent = v.name; n.style.fontSize = "11px"; card.appendChild(n);
+    card.onclick = () => {
+      selected.has(v.id) ? selected.delete(v.id) : selected.add(v.id);
+      renderVideos();
+      document.getElementById("player").innerHTML = "<video src='" + v.url + "' controls style='max-width:100%;max-height:100%'></video>";
+    };
     el.appendChild(card);
   });
+  document.getElementById("status").textContent = list.length + " Videos" + (selected.size ? " · " + selected.size + " ausgewählt" : "");
 }
 document.getElementById("btnOpen").onclick = async () => {
   try {
     const dir = await window.showDirectoryPicker();
     videos = [];
     for await (const e of dir.values()) {
-      if (e.kind === "file" && e.name.match(/\.(mp4|webm|mov)$/i)) {
+      if (e.kind === "file" && e.name.match(/\.(mp4|webm|mov|mkv)$/i)) {
         const f = await e.getFile();
-        videos.push({ id: e.name, name: e.name, url: URL.createObjectURL(f) });
+        videos.push({ id: e.name + Math.random(), name: e.name, url: URL.createObjectURL(f), folder: null });
       }
     }
+    currentFolder = null;
     renderFolders(); renderVideos();
-    document.getElementById("status").textContent = videos.length + " Videos";
-  } catch(e) {}
+  } catch(e) { document.getElementById("status").textContent = "Zugriff abgebrochen"; }
 };
 document.getElementById("btnUpdate").onclick = () => { renderVideos(); document.getElementById("status").textContent = "Aktualisiert"; };
 document.getElementById("btnMove").onclick = () => {
-  const t = prompt("Zielordner:");
-  if (t) videos.forEach(v => { if (selected.has(v.id)) v.folder = t; });
-  selected.clear(); renderVideos();
+  if (!selected.size) { alert("Zuerst Videos auswählen"); return; }
+  const t = prompt("Zielordner (z.B. Blowjob/Blasen):", currentFolder || "Blowjob/Blasen");
+  if (t) {
+    videos.forEach(v => { if (selected.has(v.id)) v.folder = t; });
+    selected.clear();
+    renderVideos();
+  }
 };
 renderFolders();
 </script>
