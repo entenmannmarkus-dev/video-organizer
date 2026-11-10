@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Video Organizer</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b0000">
 <style>
   :root { --bg: #1a0f0f; --card: #2a1a1a; --accent: #8b0000; --text: #fff; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,10 +39,12 @@
 </div>
 <div id="videos"></div>
 <script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 const categories = [
   { name: "Neu/Import", subs: [] },
   { name: "Blowjob", subs: ["Blasen", "Deepthroat"] },
-  { name: "Abspritzen", subs: ["Ins Maul spritzen"] }
+  { name: "Abspritzen", subs: ["Ins Maul spritzen"] },
+  { name: "Sperma-Spiele", subs: ["Sperma schlucken"] }
 ];
 let videos = [], selected = new Set(), currentFolder = null;
 function renderFolders() {
@@ -69,16 +73,18 @@ function renderVideos() {
   });
 }
 document.getElementById("btnOpen").onclick = async () => {
-  const dir = await window.showDirectoryPicker();
-  videos = [];
-  for await (const e of dir.values()) {
-    if (e.kind === "file" && e.name.match(/\.mp4$/i)) {
-      const f = await e.getFile();
-      videos.push({ id: e.name, name: e.name, url: URL.createObjectURL(f) });
+  try {
+    const dir = await window.showDirectoryPicker();
+    videos = [];
+    for await (const e of dir.values()) {
+      if (e.kind === "file" && e.name.match(/\.(mp4|webm|mov)$/i)) {
+        const f = await e.getFile();
+        videos.push({ id: e.name, name: e.name, url: URL.createObjectURL(f) });
+      }
     }
-  }
-  renderFolders(); renderVideos();
-  document.getElementById("status").textContent = videos.length + " Videos";
+    renderFolders(); renderVideos();
+    document.getElementById("status").textContent = videos.length + " Videos";
+  } catch(e) {}
 };
 document.getElementById("btnUpdate").onclick = () => { renderVideos(); document.getElementById("status").textContent = "Aktualisiert"; };
 document.getElementById("btnMove").onclick = () => {
