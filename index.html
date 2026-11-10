@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Video Organizer</title>
+<style>
+  :root { --bg: #1a0f0f; --card: #2a1a1a; --accent: #8b0000; --text: #fff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  header { padding: 12px; background: #120808; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  #main { flex: 1; display: flex; overflow: hidden; }
+  #folders { width: 22%; background: #120808; overflow-y: auto; padding: 8px; }
+  #folders .folder { padding: 8px; margin: 4px 0; background: var(--card); border-radius: 6px; cursor: pointer; }
+  #folders .folder.active { background: var(--accent); }
+  #center { flex: 1; display: flex; flex-direction: column; }
+  #player { height: 40%; background: #000; display: flex; align-items: center; justify-content: center; }
+  #videos { height: 32%; background: #0d0808; overflow-x: auto; display: flex; gap: 8px; padding: 8px; }
+  .video-card { min-width: 140px; background: var(--card); border-radius: 8px; padding: 6px; }
+  .video-card.selected { border: 2px solid #ff4444; }
+  .video-card video { width: 100%; height: 80px; object-fit: cover; }
+</style>
+</head>
+<body>
+<header>
+  <button id="btnOpen">📂 Ordner öffnen</button>
+  <button id="btnUpdate">🔄 Aktualisieren</button>
+  <button id="btnMove">📁 Verschieben</button>
+  <span id="status">Kein Ordner gewählt</span>
+</header>
+<div id="main">
+  <div id="folders"></div>
+  <div id="center">
+    <div id="player"><span>Video-Vorschau</span></div>
+  </div>
+</div>
+<div id="videos"></div>
+<script>
+const categories = [
+  { name: "Neu/Import", subs: [] },
+  { name: "Blowjob", subs: ["Blasen", "Deepthroat"] },
+  { name: "Abspritzen", subs: ["Ins Maul spritzen"] }
+];
+let videos = [], selected = new Set(), currentFolder = null;
+function renderFolders() {
+  const el = document.getElementById("folders");
+  el.innerHTML = "";
+  categories.forEach(cat => {
+    const d = document.createElement("div");
+    d.className = "folder" + (currentFolder === cat.name ? " active" : "");
+    d.textContent = cat.name;
+    d.onclick = () => { currentFolder = cat.name; renderFolders(); renderVideos(); };
+    el.appendChild(d);
+  });
+}
+function renderVideos() {
+  const el = document.getElementById("videos");
+  el.innerHTML = "";
+  videos.forEach(v => {
+    const card = document.createElement("div");
+    card.className = "video-card" + (selected.has(v.id) ? " selected" : "");
+    const vid = document.createElement("video");
+    vid.src = v.url; vid.muted = true;
+    card.appendChild(vid);
+    const n = document.createElement("div"); n.textContent = v.name; card.appendChild(n);
+    card.onclick = () => { selected.has(v.id) ? selected.delete(v.id) : selected.add(v.id); renderVideos(); };
+    el.appendChild(card);
+  });
+}
+document.getElementById("btnOpen").onclick = async () => {
+  const dir = await window.showDirectoryPicker();
+  videos = [];
+  for await (const e of dir.values()) {
+    if (e.kind === "file" && e.name.match(/\.mp4$/i)) {
+      const f = await e.getFile();
+      videos.push({ id: e.name, name: e.name, url: URL.createObjectURL(f) });
+    }
+  }
+  renderFolders(); renderVideos();
+  document.getElementById("status").textContent = videos.length + " Videos";
+};
+document.getElementById("btnUpdate").onclick = () => { renderVideos(); document.getElementById("status").textContent = "Aktualisiert"; };
+document.getElementById("btnMove").onclick = () => {
+  const t = prompt("Zielordner:");
+  if (t) videos.forEach(v => { if (selected.has(v.id)) v.folder = t; });
+  selected.clear(); renderVideos();
+};
+renderFolders();
+</script>
+</body>
+</html>
